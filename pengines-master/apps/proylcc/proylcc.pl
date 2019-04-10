@@ -4,8 +4,16 @@
                 goMove/4
         ]).
 
+% checked/1 sirve para marcar cuando recorro
 :- dynamic checked/1.
+
+% encerradoActual/1 sirve para marcar los encerrados para luego eliminarlos
 :- dynamic encerradoActual/1.
+
+% fueOcupado/1 sirve para marcar los lugares donde alguna vez se coloco una piedra
+% y evitar que si ahora esta vacio se vuelva a poner una.
+:- dynamic fueOcupado/1.
+
 
 emptyBoard([["-","-","-","-","-","-","-","-","-","-","-","-","-","-","-","-","-","-","-"],
              ["-","-","-","-","-","-","-","-","-","-","-","-","-","-","-","-","-","-","-"],
@@ -37,8 +45,10 @@ emptyBoard([["-","-","-","-","-","-","-","-","-","-","-","-","-","-","-","-","-"
 goMove(Board, Player, [R,C], RBoard):-
     replace(Row, R, NRow, Board, AuxBoard),
     replace("-", C, Player, Row, NRow),
-    esValida(Board, Player, [R,C]),
-    checkEncerradoPlayer(AuxBoard, [R,C], Player, RBoard).
+    checkEncerradoPlayer(AuxBoard, [R,C], Player, RBoard),
+    !,
+    esValida(RBoard, Player, [R,C]),
+    assert(fueOcupado([R,C])).
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -60,10 +70,10 @@ replace(X, XIndex, Y, [Xi|Xs], [Xi|XsY]):-
 %
 esValida(Board, "w", Index):- 
     not(estaEncerrado(Board, "b", "w", Index)),
-    retractall(encerradoActual(_)).
+    not(fueOcupado(Index)).
 esValida(Board, "b", Index):- 
     not(estaEncerrado(Board, "w", "b", Index)),
-    retractall(encerradoActual(_)).
+    not(fueOcupado(Index)).
 
 %
 %   checkEncerradoPlayer(Board, Player, NBoard)
