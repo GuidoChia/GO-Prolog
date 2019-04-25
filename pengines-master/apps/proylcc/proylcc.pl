@@ -4,15 +4,12 @@
                 goMove/4
         ]).
 
-% checked/1 sirve para marcar cuando recorro
-:- dynamic checked/1.
+% checked/2 sirve para marcar cuando recorro
+:- dynamic checked/2.
 
-% encerradoActual/1 sirve para marcar los encerrados para luego eliminarlos
-:- dynamic encerradoActual/1.
+% encerradoActual/2 sirve para marcar los encerrados para luego eliminarlos
+:- dynamic encerradoActual/2.
 
-% fueOcupado/1 sirve para marcar los lugares donde alguna vez se coloco una piedra
-% y evitar que si ahora esta vacio se vuelva a poner una.
-:- dynamic fueOcupado/2.
 
 
 emptyBoard([["-","-","-","-","-","-","-","-","-","-","-","-","-","-","-","-","-","-","-"],
@@ -47,9 +44,7 @@ goMove(Board, Player, [R,C], RBoard):-
     replace("-", C, Player, Row, NRow),
     checkEncerradoPlayer(AuxBoard, [R,C], Player, RBoard),
     !,
-    esValida(RBoard, Player, [R,C]),
-    assert(fueOcupado(Player, [R,C])).
-
+    esValida(RBoard, Player, [R,C]).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
@@ -69,11 +64,9 @@ replace(X, XIndex, Y, [Xi|Xs], [Xi|XsY]):-
 %	Chequea si que player ponga una piedra en index es valido (no es suicidio)
 %
 esValida(Board, "w", Index):- 
-    not(estaEncerrado(Board, "b", "w", "-", Index)),
-    not(fueOcupado(_,Index)).
+    not(estaEncerrado(Board, "b", "w", "-", Index)).
 esValida(Board, "b", Index):- 
-    not(estaEncerrado(Board, "w", "b", "-", Index)),
-    not(fueOcupado(_,Index)).
+    not(estaEncerrado(Board, "w", "b", "-", Index)).
 
 %
 %   checkEncerradoPlayer(+Board, +Index, +Player, -NBoard)
@@ -112,19 +105,17 @@ checkEncerrado(Board, [R,C], Player, Opponent, Liberty, NBoard):-
 %
 %   checkEncerradoCascara(+Board, +Player, +Opponent, +Liberty, -NBoard, +Index)
 %   Chequea si en el Board hay algun Opponent encerrado por Player
-%   Si al buscar se encuentra un liberty, automaticamente no se esta encerrado
-%   Se usa para avanzar en el index grande
+%   Si al buscar se encuentra un liberty, automaticamente no esta encerrado
 %
 checkEncerradoCascara( _Board, _Player, _Opponent, _Liberty, [R,C]):-R<0;R>18;C<0;C>18.
 
 checkEncerradoCascara(Board, Player, Opponent, Liberty, [R,C]):-
     estaEncerrado(Board, Player, Opponent, Liberty, [R,C]),
-    retractall(checked(_)).
-
+    checkedToEncerrado.
     
 checkEncerradoCascara(Board, Player, Opponent, Liberty, [R,C]):-
     noEstaEncerrado(Board, Player, Opponent, Liberty, [R,C]),
-    retractall(checked(_)).
+    retractall(checked(_,_)).
 
 %
 %     estaEncerrado(+Board, +Player, +Opponent, +Liberty, +Index)
@@ -134,6 +125,7 @@ checkEncerradoCascara(Board, Player, Opponent, Liberty, [R,C]):-
 estaEncerrado(Board, Player, Opponent, Liberty, [R,C]):-
     getValueOnBoard(Board, [R,C], Value),
     Value \= Player,
+    Value \= Liberty,
     RArriba is R-1,
     IndexVecinoArriba = [RArriba, C] ,
     RAbajo is R+1,
@@ -145,9 +137,8 @@ estaEncerrado(Board, Player, Opponent, Liberty, [R,C]):-
     IndexVecinos = [IndexVecinoArriba, IndexVecinoAbajo, IndexVecinoIzquierdo, IndexVecinoDerecho],
     getValueListOnBoard(Board, IndexVecinos, ValuesVecinos),
     not(member(Liberty, ValuesVecinos)),
-    assert(checked([R,C])),
-    vecinoEstaEncerrado(Board, Player, Opponent, Liberty, ValuesVecinos, IndexVecinos),
-    assert(encerradoActual([R,C])).
+    assert(checked(Player, [R,C])),
+    vecinoEstaEncerrado(Board, Player, Opponent, Liberty, ValuesVecinos, IndexVecinos).
 
 %
 %   vecinoEstaEncerrado(+Board, +Player, +Opponent, +Liberty, +ValuesVecinos, +IndexVecinos).
@@ -163,11 +154,11 @@ vecinoEstaEncerrado(Board, Player, Opponent, Liberty, ["o"|Vs], [_|Is]):-
     vecinoEstaEncerrado(Board, Player, Opponent, Liberty, Vs, Is).
 
 vecinoEstaEncerrado(Board, Player, Opponent, Liberty, [Opponent|Vs], [I|Is]):-
-    checked(I),
+    checked(_,I),
     vecinoEstaEncerrado(Board, Player, Opponent, Liberty, Vs, Is).
 
 vecinoEstaEncerrado(Board, Player, Opponent, Liberty, [Opponent|Vs], [I|Is]):-
-    not(checked(I)),
+    not(checked(_,I)),
     estaEncerrado(Board, Player, Opponent, Liberty, I),
     vecinoEstaEncerrado(Board, Player, Opponent, Liberty, Vs, Is).
 
@@ -176,7 +167,7 @@ vecinoEstaEncerrado(Board, Player, Opponent, Liberty, [Opponent|Vs], [I|Is]):-
 %     true si en index no hay un Opponent encerrado por Player
 %
 noEstaEncerrado(Board, Player, Opponent, Liberty, Index):-
-	retractall(checked(_)),
+	retractall(checked(_,_)),
     not(estaEncerrado(Board, Player, Opponent, Liberty, Index)).
     
 
@@ -221,29 +212,77 @@ getListaIndex(Index, Board, Lista):-
 %	Elimina todos los marcados como encerrados actuales y devuelve el nuevo board
 %
 eliminarEncerradosActuales(Board,Board):-
-    not(encerradoActual(_)).
+    not(encerradoActual(_,_)).
 
 eliminarEncerradosActuales( Board, NBoard):-
-    encerradoActual([R,C]),
+    encerradoActual(_,[R,C]),
     replace(Row, R, NRow, Board,AuxBoard),
     replace(_, C, "-", Row, NRow),
-    retract(encerradoActual([R,C])),
+    retract(encerradoActual(_,[R,C])),
     eliminarEncerradosActuales(AuxBoard, NBoard).
-
-%
-%	checkWin(+Board, -PWhite, -PBlack)
-%	Chequea si se termino la partida, si se termino retorna los puntos
-%	de cada color en las dos variables
-%
-%
 
 %
 %	winPoints(+Board, -PWhite, -PBlack)
 %	Calcula los puntos de cada equipo cuando se gana
 %	Se calcula de la siguiente manera: Lugares en el tablero ocupados por cada color
 %	sumado a la cantidad de espacios vacios capturados por un color
-%	IDEA: ir guardando los lugares que se ocuparon por color, 
-%	y cuando se saca alguno del tablero, se le da ese lugar al color contrario
-%	de esta forma calcular los puntos es simplemente calcular cuantos hay del color
-%	segun la logica.
 %
+
+winPoints(Board, PWhite, PBlack):-
+    calcularPuntos(Board, "w", "-", "b", PWhite),
+    calcularPuntos(Board, "b", "-", "w", PBlack).
+    
+%
+%	calcularPuntos(+Board, +Player, +Opponent, +Liberty, -P)
+%	Calcula los puntos de Player, buscando donde encierra Opponents, y donded ocupa lugares
+%
+
+calcularPuntos(Board, Player, Opponent, Liberty, P):-
+    IndexInicial = [0,0],
+    calcularPuntosAux(Board,Player,Opponent, Liberty, IndexInicial),
+    findall(I, encerradoActual(Player, I), LAux),
+    length(LAux, P).
+
+calcularPuntosAux(_Board,_Player,_Opponent, _Liberty, [19,_]).
+
+calcularPuntosAux(Board, Player, Opponent, Liberty, Index):-
+    encerradoActual(_,Index),
+    getNext(Index, Next),
+    calcularPuntosAux(Board, Player, Opponent, Liberty, Next).
+
+calcularPuntosAux(Board, Player, Opponent, Liberty, Index):-
+    not(encerradoActual(_,Index)),
+    getValueOnBoard(Board, Index, V),
+    V = Player,
+    assert(encerradoActual(Player, Index)),
+    getNext(Index, Next),
+    calcularPuntosAux(Board, Player, Opponent, Liberty, Next).
+
+calcularPuntosAux(Board, Player, Opponent, Liberty, Index):-
+    not(encerradoActual(_,Index)),
+    getValueOnBoard(Board, Index, V),
+    V = Liberty,
+    getNext(Index, Next),
+    calcularPuntosAux(Board, Player, Opponent, Liberty, Next).
+    
+
+calcularPuntosAux(Board, Player, Opponent, Liberty, Index):-
+    not(encerradoActual(_,Index)),
+    checkEncerradoCascara(Board, Player, Opponent, Liberty, Index),
+    getNext(Index, Next),
+    calcularPuntosAux(Board, Player, Opponent, Liberty, Next).
+ 
+
+getNext([R,19], [NR,0]):-
+    NR is R+1.
+
+getNext([R,C], [R,NC]):-
+    C<19,
+    NC is C+1.
+    
+checkedToEncerrado:-not(checked(_,_)).
+checkedToEncerrado:-
+    checked(P, I),
+    assert(encerradoActual(P, I)),
+   	retract(checked(P,I)),
+    checkedToEncerrado.
