@@ -9,7 +9,7 @@ var cellElems;
 var turnBlack = false;
 var bodyElem;
 var latestStone;
-
+var passed = false;
 
 
 /**
@@ -18,7 +18,7 @@ var latestStone;
 */
 
 function init() {
-    document.getElementById("passBtn").addEventListener('click', () => switchTurn());
+    document.getElementById("passBtn").addEventListener('click', () => pass());
     bodyElem = document.getElementsByTagName('body')[0];
     createBoard();
     // Creación de un conector (interface) para comunicarse con el servidor de Prolog.
@@ -74,13 +74,25 @@ function handleCreate() {
 
 function handleSuccess(response) {
     gridData = response.data[0].Board;
-    for (let row = 0; row < gridData.length; row++)
-        for (let col = 0; col < gridData[row].length; col++) {
-            cellElems[row][col].className = "gridCell" +
-                (gridData[row][col] === "w" ? " stoneWhite" : gridData[row][col] === "b" ? " stoneBlack" : "") +
-                (latestStone && row === latestStone[0] && col === latestStone[1] ? " latest" : "");
+    if (gridData!==undefined){
+      passed = false;
+      for (let row = 0; row < gridData.length; row++)
+           for (let col = 0; col < gridData[row].length; col++) {
+              cellElems[row][col].className = "gridCell" +
+                  (gridData[row][col] === "w" ? " stoneWhite" : gridData[row][col] === "b" ? " stoneBlack" : "") +
+                 (latestStone && row === latestStone[0] && col === latestStone[1] ? " latest" : "");
         }
-    switchTurn();
+     switchTurn();
+      
+    }
+    var PWhite = response.data[0].PWhite;
+    var PBlack = response.data[0].PBlack;
+    console.log(PWhite);
+    
+    if (PWhite!==undefined){
+      alert("Puntos blanco: "+PWhite+". Puntos negro: "+PBlack);
+      document.location.reload(false);
+    } 
 }
 
 /**
@@ -98,13 +110,25 @@ function handleFailure() {
 function handleClick(row, col) {
     const s = "goMove(" + Pengine.stringify(gridData) + "," + Pengine.stringify(turnBlack ? "b" : "w") + "," + "[" + row + "," + col + "]" + ",Board)";
     pengine.ask(s);
-    console.log(s);
     latestStone = [row, col];
 }
 
 function switchTurn() {
     turnBlack = !turnBlack;
     bodyElem.className = turnBlack ? "turnBlack" : "turnWhite";
+}
+
+function pass(){
+  if (!passed){
+    passed = true;
+    switchTurn();
+  }
+  else{
+    const s = "winPoints(" + Pengine.stringify(gridData) + ", PWhite, PBlack)";
+    pengine.ask(s);
+console.log(s);
+  }
+  
 }
 
 /**
