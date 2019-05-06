@@ -10,6 +10,9 @@
 % encerradoActual/2 sirve para marcar los encerrados para luego eliminarlos
 :- dynamic encerradoActual/2.
 
+% noEncerrado/1 indica que un lugar no esta encerrado (sirve para hacer mas eficiente el chequeo de puntos)
+:- dynamic noEncerrado/1.
+
 
 
 emptyBoard([["-","-","-","-","-","-","-","-","-","-","-","-","-","-","-","-","-","-","-"],
@@ -31,6 +34,7 @@ emptyBoard([["-","-","-","-","-","-","-","-","-","-","-","-","-","-","-","-","-"
              ["-","-","-","-","-","-","-","-","-","-","-","-","-","-","-","-","-","-","-"],
              ["-","-","-","-","-","-","-","-","-","-","-","-","-","-","-","-","-","-","-"],
              ["-","-","-","-","-","-","-","-","-","-","-","-","-","-","-","-","-","-","-"]]).
+	
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
@@ -99,6 +103,8 @@ checkEncerrado(Board, [X|Xs], Player, Opponent, Liberty, NBoard):-
 %   checkEncerradoCascara(+Board, +Player, +Opponent, +Liberty, -NBoard, +Index)
 %   Chequea si en el Board hay algun Opponent encerrado por Player
 %   Si al buscar se encuentra un liberty, automaticamente no esta encerrado
+%   Se usa para también para cambiar los chequeados por encerrados, en caso de que este encerrado,
+%   o para borrar las marcas de chequeado, en caso de que no.
 %
 checkEncerradoCascara( _Board, _Player, _Opponent, _Liberty, [R,C]):-R<0;R>18;C<0;C>18.
 
@@ -230,7 +236,10 @@ eliminarEncerradosActuales( Board, NBoard):-
 
 winPoints(Board, PWhite, PBlack):-
     calcularPuntos(Board, "w", "-", "b", PWhite),
-    calcularPuntos(Board, "b", "-", "w", PBlack).
+    calcularPuntos(Board, "b", "-", "w", PBlack),
+	retractall(checked(_,_)),
+	retractall(encerradoActual(_,_)),
+	retractall(noEncerrado(_)).
     
 %
 %	calcularPuntos(+Board, +Player, +Opponent, +Liberty, -P)
@@ -243,15 +252,22 @@ calcularPuntos(Board, Player, Opponent, Liberty, P):-
     findall(I, encerradoActual(Player, I), LAux),
     length(LAux, P).
 
+%
+%	calcularPuntosAux(Board, Player, Opponent, Liberty, Index)
+%  Calcula los puntos de Player, buscando donde encierra Opponents, y donded ocupa lugares
+%  Se usa para recorrer todo el tablero
+%
+
 calcularPuntosAux(_Board,_Player,_Opponent, _Liberty, [19,_]).
 
 calcularPuntosAux(Board, Player, Opponent, Liberty, Index):-
-    encerradoActual(_,Index),
+    (encerradoActual(_,Index);noEncerrado(Index)),
     getNext(Index, Next),
     calcularPuntosAux(Board, Player, Opponent, Liberty, Next).
 
 calcularPuntosAux(Board, Player, Opponent, Liberty, Index):-
     not(encerradoActual(_,Index)),
+    not(noEncerrado(Index)),
     getValueOnBoard(Board, Index, V),
     V = Player,
     assert(encerradoActual(Player, Index)),
@@ -260,6 +276,7 @@ calcularPuntosAux(Board, Player, Opponent, Liberty, Index):-
 
 calcularPuntosAux(Board, Player, Opponent, Liberty, Index):-
     not(encerradoActual(_,Index)),
+    not(noEncerrado(Index)),
     getValueOnBoard(Board, Index, V),
     V = Liberty,
     getNext(Index, Next),
@@ -268,10 +285,27 @@ calcularPuntosAux(Board, Player, Opponent, Liberty, Index):-
 
 calcularPuntosAux(Board, Player, Opponent, Liberty, Index):-
     not(encerradoActual(_,Index)),
-    checkEncerradoCascara(Board, Player, Opponent, Liberty, Index),
+    not(noEncerrado(Index)),
+    checkEncerradoSinUncheck(Board, Player, Opponent, Liberty, Index),
     getNext(Index, Next),
     calcularPuntosAux(Board, Player, Opponent, Liberty, Next).
  
+checkEncerradoSinUncheck( _Board, _Player, _Opponent, _Liberty, [R,C]):-R<0;R>18;C<0;C>18.
+
+checkEncerradoSinUncheck(Board, Player, Opponent, Liberty, [R,C]):-
+    estaEncerrado(Board, Player, Opponent, Liberty, [R,C]),
+    checkedToEncerrado.
+    
+checkEncerradoSinUncheck(Board, Player, Opponent, Liberty, [R,C]):-
+    noEstaEncerrado(Board, Player, Opponent, Liberty, [R,C]),
+    checkedToNoEncerrado.
+
+%
+%	getNext(+Index, -NextIndex)
+%	Obtiene el index siguiente al dado.
+%	El siguiente será el vecino derecho, o bien el primero de la fila siguiente
+%	si el index dado es de la ultima  columna.
+%
 
 getNext([R,19], [NR,0]):-
     NR is R+1.
@@ -280,9 +314,25 @@ getNext([R,C], [R,NC]):-
     C<19,
     NC is C+1.
     
+%
+%	checkedToEncerrado
+%	Transforma a aquellos marcados como chequeados en encerrados.
+%
+
 checkedToEncerrado:-not(checked(_,_)).
 checkedToEncerrado:-
     checked(P, I),
     assert(encerradoActual(P, I)),
    	retract(checked(P,I)),
     checkedToEncerrado.
+
+%
+%	checkedToNoEncerrado
+%	Transforma a los marcados en no encerrados
+%
+checkedToNoEncerrado:-not(checked(_,_)).
+checkedToNoEncerrado:-
+    checked(P,I),
+    assert(noEncerrado(I)),
+    retract(checked(P,I)),
+    checkedToNoEncerrado.
