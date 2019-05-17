@@ -19,7 +19,7 @@
 % 
 % 	noEncerrado(Index) 
 % 	Se utilza para indicar que un lugar no esta encerrado (sirve para hacer mas eficiente el chequeo de puntos)
-% 	Únicamente se usa en el conte de puntos, ya que se tiene la certeza de que el tablero no cambiará.
+% 	ï¿½nicamente se usa en el conteo de puntos, ya que se tiene la certeza de que el tablero no cambiarï¿½.
 % 
 :- dynamic noEncerrado/1.
 
@@ -50,14 +50,11 @@ emptyBoard([["-","-","-","-","-","-","-","-","-","-","-","-","-","-","-","-","-"
 %
 % 	goMove(+Board, +Player, +Pos, -RBoard)
 %
-% 	RBoard es la configuración resultante de reflejar la movida del jugador Player
-% 	en la posición Pos a partir de la configuración Board.
-% 	Luego de colocar una ficha de Player en Pos, se busca si algún adyacente ha sido 
-% 	encerrado. De ser así, son eliminados, devolviendo el tablero en RBoard.
-% 	Dado que se utiliza un predicado dinámico checked para marcar los visitados en el
-% 	proceso de chequeo de encierro, esto da lugar a posibles soluciones alternativas.
-% 	Por lo tanto, se utiliza el cut (!), para no permitirlas.
-% 	Luego se chequea si la posición donde se ha colocado la ficha no es sucidio.
+% 	RBoard es la configuraciï¿½n resultante de reflejar la movida del jugador Player
+% 	en la posiciï¿½n Pos a partir de la configuraciï¿½n Board.
+% 	Luego de colocar una ficha de Player en Pos, se busca si algï¿½n adyacente ha sido 
+% 	encerrado. De ser asï¿½, son eliminados, devolviendo el tablero en RBoard.
+% 	Luego se chequea si la posiciï¿½n donde se ha colocado la ficha no es sucidio.
 % 
 % 
 
@@ -140,7 +137,7 @@ checkEncerradoCascara(Board, Player, Opponent, Liberty, [R,C]):-
 %     estaEncerrado(+Board, +Player, +Opponent, +Liberty, +Index)
 %     True si en [R,C] hay un Opponent encerrado por Player
 %     Empieza chequeando si el Index ya fue marcado como encerrado.
-%     Si no fue así, recursivamente visita sus vecinos para chequear si esta encerrado.
+%     Si no fue asï¿½, recursivamente visita sus vecinos para chequear si esta encerrado.
 %   
 
 estaEncerrado(_, Player, _, _, [R,C]):- encerradoActual(Player, [R,C]).
@@ -172,8 +169,8 @@ getVecinos([R,C], [IndexVecinoArriba, IndexVecinoAbajo, IndexVecinoIzquierdo, In
 %   Chequea recursivamente si los vecinos estan encerrados.
 %   
 %   Se utiliza el cut para evitar caminos alternativos al encontrar que un indice fue visitado.
-%   Dado que el metodo usado para marcar visitados (checked/2) es dinámico, puede cambiar
-%   dinámicamente, produciendo así soluciones alternativas no deseadas.
+%   Dado que el metodo usado para marcar visitados (checked/2) es dinï¿½mico, puede cambiar
+%   dinï¿½micamente, produciendo asï¿½ soluciones alternativas no deseadas.
 %
 
 vecinoEstaEncerrado(_,_,_,_,[],[]).
@@ -234,7 +231,7 @@ getValueLista(Columna, Lista, Value):-nth0(Columna, Lista, Value).
 %
 %   getListaIndex(+Index, +Board, -Lista)
 %   Obtiene la lista del index indicado del Board, la devuelve en Lista.
-%   En caso de que el Index este fuera del tablero, devuelvo la lista vacía.
+%   En caso de que el Index este fuera del tablero, devuelvo la lista vacï¿½a.
 %
 
 getListaIndex(Index,_,[]):-Index<0;Index>18.
@@ -267,6 +264,7 @@ winPoints(Board, 0, 0):-
     emptyBoard(Board).
 
 winPoints(Board, PWhite, PBlack):-
+    not(emptyBoard(Board)),
     calcularPuntos(Board, "w", "-", "b", PWhite),
     calcularPuntos(Board, "b", "-", "w", PBlack),
 	retractall(encerradoActual(_,_)),
@@ -328,7 +326,7 @@ calcularPuntosAux(Board, Player, Opponent, Liberty, Index):-
 %   Chequea si en el Board hay algun Opponent encerrado por Player
 %   Si al buscar se encuentra un liberty, automaticamente no esta encerrado
 %   Si esta encerrado, marca los chequeados como encerrados. 
-%   Si no esta encerrado, marca los chequeados como no encerrados, ya que el tablero no cambiará.
+%   Si no esta encerrado, marca los chequeados como no encerrados, ya que el tablero no cambiarï¿½.
 %   
 checkEncerradoSinUncheck(Board, Player, Opponent, Liberty, [R,C]):-
     estaEncerrado(Board, Player, Opponent, Liberty, [R,C]),
@@ -341,8 +339,8 @@ checkEncerradoSinUncheck(Board, Player, Opponent, Liberty, [R,C]):-
 %
 %	getNext(+Index, -NextIndex)
 %	Obtiene el index siguiente al dado.
-%	El siguiente será el vecino derecho, 
-%	o bien el primero de la fila siguiente, si el index dado es de la última columna.
+%	El siguiente serï¿½ el vecino derecho, 
+%	o bien el primero de la fila siguiente, si el index dado es de la ï¿½ltima columna.
 %
 
 getNext([R,18], [NR,0]):-
@@ -355,7 +353,7 @@ getNext([R,C], [R,NC]):-
 %
 %	checkedToEncerrado
 %	Transforma a aquellos marcados como chequeados en encerrados.
-%	Termina cuando no hay más marcados como chequeados.
+%	Termina cuando no hay mï¿½s marcados como chequeados.
 %
 
 checkedToEncerrado:-not(checked(_,_)).
@@ -368,7 +366,7 @@ checkedToEncerrado:-
 %
 %	checkedToNoEncerrado
 %	Transforma a aquellos marcados como chequeados en no encerrados.
-%	Termina cuando no hay más marcados como chequeados.
+%	Termina cuando no hay mï¿½s marcados como chequeados.
 %
 checkedToNoEncerrado:-not(checked(_,_)).
 checkedToNoEncerrado:-
